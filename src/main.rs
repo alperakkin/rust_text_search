@@ -1,60 +1,49 @@
-use std::collections::HashMap;
 
-struct Node {
-    children:  HashMap<char, Node>,
-    end_word: bool,
+use std::env;
+use std::fs::File;
+use std::io::{self, BufRead};
+use std::path::Path;
+
+mod trie;
+
+fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
+where P: AsRef<Path>, {
+    let file = File::open(filename)?;
+    Ok(io::BufReader::new(file).lines())
 }
-
-impl Node {
-    fn new() -> Self {
-        Self {
-            children: HashMap::new(),
-            end_word: false,
-        }
-    }
-}
-
-
-struct Trie {
-    root: Node,
-}
-
-impl Trie {
-    fn new() -> Self {
-        Self { root: Node::new() }
-    }
-
-    fn insert(&mut self, word: &str) {
-        let mut current_node = &mut self.root;
-        for ch in word.chars() {
-            current_node = current_node.children.entry(ch).or_insert(Node::new());
-        }
-        current_node.end_word = true;
-    }
-
-    fn search(&self, word: &str) -> bool {
-        let mut current_node = &self.root;
-        for ch in word.chars(){
-            if let Some(next_node) = current_node.children.get(&ch)
-            {
-                current_node = next_node;
-            } else
-            {
-                return false;
-            }
-        }
-        current_node.end_word
-    }
-}
-
-
 
 
 fn main() {
-    let mut trie = Trie::new();
-    trie.insert("hello");
-    trie.insert("world");
-    println!("{}", trie.search("hello"));  // true
-    println!("{}", trie.search("world"));  // true
-    println!("{}", trie.search("hellow"));   // false
+    let args: Vec<String> = env::args().collect();
+    if args.len() != 2{
+        eprintln!("Err: Path to file must be provied.");
+        return;
+    }
+    let mut trie = trie::Trie::new();
+
+    let file = &args[1];
+    if let Ok(lines) = read_lines(file) {
+        for line in lines.flatten() {
+            trie.insert(&line);
+        }
+    }
+
+
+    loop {
+        let mut buffer = String::new();
+        println!("Search:");
+        let _ = io::stdin().read_line(&mut buffer);
+        let binding =  buffer.to_string();
+        let word = &binding.trim();
+        if word.eq(&"exit") {
+            println!("exiting...");
+            return;
+        }
+        let result = trie.search(word);
+        println!("{} -> {}", word, result);
+
+
+    }
+
+
 }
